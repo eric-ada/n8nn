@@ -1,147 +1,109 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Voice Recorder to n8n</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
-    button { margin-right: 8px; margin-bottom: 12px; padding: 10px 16px; }
-    #status, #result { margin-top: 12px; white-space: pre-wrap; }
-    audio { display: block; margin-top: 12px; width: 100%; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快捷選單</title>
+    <style>
+        /* Basic Reset & Layout Styling */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        /* Button Group Wrapper */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Spacing between buttons */
+        }
+
+        /* Individual Button Styling */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            text-decoration: none;
+            color: #ffffff;
+            background-color: #007bff;
+            border-radius: 8px;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2);
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Different color accents for variety (Optional) */
+        .btn-settings { background-color: #34495e; box-shadow: 0 2px 5px rgba(52, 73, 94, 0.2); }
+        .btn-settings:hover { background-color: #2c3e50; }
+
+        .btn-test { background-color: #27ae60; box-shadow: 0 2px 5px rgba(39, 174, 96, 0.2); }
+        .btn-test:hover { background-color: #219653; }
+
+        .btn-sync { background-color: #2980b9; box-shadow: 0 2px 5px rgba(41, 128, 185, 0.2); }
+        .btn-sync:hover { background-color: #2471a3; }
+    </style>
 </head>
 <body>
-  <h1>Voice Recorder → n8n Webhook</h1>
 
-  <button id="startBtn">Start Recording</button>
-  <button id="stopBtn" disabled>Stop Recording</button>
-  <button id="uploadBtn" disabled>Upload to n8n</button>
+    <div class="container">
+        <h1>快捷操作選單</h1>
+        <div class="button-group">
+            <!-- 設定 Button -->
+            <a href="https://docs.google.com/spreadsheets/d/1crjPqNh3Jc-CTV6FOK4FZLyf7-UEGgt56pjX9wk2kcE/edit?usp=drive_link" 
+               class="btn btn-settings" 
+               target="_blank" 
+               rel="noopener noreferrer">設定</a>
 
-  <audio id="player" controls></audio>
+            <!-- 測試 Button -->
+            <a href="https://eric-ada.github.io/n8nn/off_days_viewer.html" 
+               class="btn btn-test" 
+               target="_blank" 
+               rel="noopener noreferrer">測試</a>
 
-  <div id="status"></div>
-  <div id="result"></div>
+            <!-- 同步 Button -->
+            <a href="https://overfull-tribune-ream.ngrok-free.dev/form-test/e16c5e87-8cee-4fda-92f8-d2f31b01df0e" 
+               class="btn btn-sync" 
+               target="_blank" 
+               rel="noopener noreferrer">同步</a>
+        </div>
+    </div>
 
-  <script>
-    const webhookUrl = "http://localhost:5678/workflow/EuMixQhCTwMtmuFA";
-
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const player = document.getElementById("player");
-    const statusEl = document.getElementById("status");
-    const resultEl = document.getElementById("result");
-
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let audioBlob = null;
-    let stream = null;
-
-    function setStatus(text) {
-      statusEl.textContent = text;
-    }
-
-    startBtn.addEventListener("click", async () => {
-      try {
-        resultEl.textContent = "";
-        audioChunks = [];
-        audioBlob = null;
-
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-        let mimeType = "";
-        if (MediaRecorder.isTypeSupported("audio/webm")) {
-          mimeType = "audio/webm";
-        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
-          mimeType = "audio/mp4";
-        }
-
-        mediaRecorder = mimeType
-          ? new MediaRecorder(stream, { mimeType })
-          : new MediaRecorder(stream);
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            audioChunks.push(event.data);
-          }
-        };
-
-        mediaRecorder.onstop = () => {
-          const finalType = mimeType || audioChunks[0]?.type || "audio/webm";
-          const extension = finalType.includes("mp4") ? "m4a" : "webm";
-
-          audioBlob = new Blob(audioChunks, { type: finalType });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          player.src = audioUrl;
-          uploadBtn.disabled = false;
-          setStatus(`Recording stopped. File ready: recording.${extension}`);
-        };
-
-        mediaRecorder.start();
-        setStatus("Recording...");
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        uploadBtn.disabled = true;
-      } catch (error) {
-        console.error(error);
-        setStatus("Cannot access microphone: " + error.message);
-      }
-    });
-
-    stopBtn.addEventListener("click", () => {
-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-      }
-
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-    });
-
-    uploadBtn.addEventListener("click", async () => {
-      if (!audioBlob) {
-        setStatus("No audio to upload.");
-        return;
-      }
-
-      try {
-        setStatus("Uploading to n8n...");
-
-        const mimeType = audioBlob.type || "audio/webm";
-        const extension = mimeType.includes("mp4") ? "m4a" : "webm";
-        const file = new File([audioBlob], `recording.${extension}`, { type: mimeType });
-
-        const formData = new FormData();
-        formData.append("audio", file);
-        formData.append("userId", "demo-user");
-        formData.append("note", "Recorded from browser");
-
-        const response = await fetch(webhookUrl, {
-          method: "POST",
-          body: formData
-        });
-
-        const contentType = response.headers.get("content-type") || "";
-        let data;
-
-        if (contentType.includes("application/json")) {
-          data = await response.json();
-          resultEl.textContent = JSON.stringify(data, null, 2);
-        } else {
-          data = await response.text();
-          resultEl.textContent = data;
-        }
-
-        setStatus(`Upload complete. HTTP ${response.status}`);
-      } catch (error) {
-        console.error(error);
-        setStatus("Upload failed: " + error.message);
-      }
-    });
-  </script>
 </body>
 </html>
